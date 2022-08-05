@@ -1,0 +1,13 @@
+*.exe
+*.txt
+input/*
+texts/*
+songs/*
+output
+.vscode
+.pytest_cache
+__pycache__
+
+threading_test.py
+
+!.gitkeep
