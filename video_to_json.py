@@ -1,11 +1,14 @@
 import json
 import os
-from pydub import AudioSegment, silence
-from consts import DATA_FOLDER, DEFAULT_ALPHABET
-from transformations import seconds_to_sample
 import sys
 
+from pydub import AudioSegment, silence
+
+from consts import DATA_FOLDER, DEFAULT_ALPHABET
+from transformations import seconds_to_sample
+
 input_string = DEFAULT_ALPHABET
+
 
 def fix_input_path(input_video_name):
     if os.path.isfile(input_video_name):
@@ -21,28 +24,29 @@ def fix_input_path(input_video_name):
 
     return None
 
+
 def get_file_name_meta(input_video_name):
     path, ext = os.path.splitext(input_video_name)
     base_name = os.path.basename(path)
     return base_name, ext
 
+
 def audio_to_samples(audio_array, sample_rate):
     return [
         [
-            int(seconds_to_sample(start/1000, sample_rate)),
-            int(seconds_to_sample(end/1000, sample_rate))
+            int(seconds_to_sample(start / 1000, sample_rate)),
+            int(seconds_to_sample(end / 1000, sample_rate)),
         ]
         for start, end in audio_array
     ]
 
+
 def samples_to_dict(samples):
     dict_ = {}
     for i, (start, end) in enumerate(samples):
-        dict_[input_string[i]] = {
-            "start": start,
-            "length": end - start
-        }
+        dict_[input_string[i]] = {"start": start, "length": end - start}
     return dict_
+
 
 if __name__ == "__main__":
 
@@ -52,7 +56,7 @@ if __name__ == "__main__":
         print(f"\tpython {sys.argv[0]} thethiny")
         print(f"\tpython {sys.argv[0]} myfiles\\thethiny_low.mp4 0123456789")
         sys.exit(1)
-    
+
     if len(sys.argv) > 2:
         input_string = sys.argv[2].strip()
         input_string = input_string.upper()
@@ -76,13 +80,19 @@ if __name__ == "__main__":
     print(f"Sample Rate: {sample_rate}")
     print(f"dBFS: {dBFS}")
 
-    audio_info = silence.detect_nonsilent(myaudio, min_silence_len=250, silence_thresh=dBFS-16)
+    audio_info = silence.detect_nonsilent(
+        myaudio, min_silence_len=250, silence_thresh=dBFS - 16
+    )
     audio_info = audio_to_samples(audio_info, sample_rate)
 
     if len(audio_info) != len(input_string):
-        print(f"Error: Audio length ({len(audio_info)}) does not match input string length ({len(input_string)})")
+        print(
+            f"Error: Audio length ({len(audio_info)}) does not match input string length ({len(input_string)})"
+        )
         print(input_string)
-        print("Please make sure that your input string is correct and that the audio is loud and clear")
+        print(
+            "Please make sure that your input string is correct and that the audio is loud and clear"
+        )
         sys.exit(1)
 
     audio_json = samples_to_dict(audio_info)

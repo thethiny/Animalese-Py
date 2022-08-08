@@ -1,20 +1,15 @@
-import json
-import os
-import re
-from functools import partial
-from multiprocessing.pool import ThreadPool
-from sys import argv
-from threading import local
-
 import librosa
 import numpy
 from moviepy.audio.AudioClip import AudioArrayClip
 
+
 def sample_to_seconds(sample, sample_rate):
     return sample / sample_rate
 
+
 def seconds_to_sample(seconds, sample_rate):
     return seconds * sample_rate
+
 
 # Test Change Pitch
 def shift_pitch_audio(audio_array, steps):
@@ -25,6 +20,7 @@ def shift_pitch_audio(audio_array, steps):
     # Create stereo audio
     y_shifted = numpy.stack((y_shifted_l, y_shifted_r), axis=1)
     return y_shifted
+
 
 def shift_pitch(clip, octaves):
     audio = clip.audio.set_fps(48000)

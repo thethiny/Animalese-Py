@@ -1,8 +1,8 @@
 import json
 import os
+import random
 from functools import partial
 from multiprocessing.pool import ThreadPool
-import random
 from sys import argv
 from threading import local
 
@@ -11,8 +11,8 @@ from moviepy.editor import ColorClip
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from proglog import TqdmProgressBarLogger
 from tqdm import tqdm
-from consts import DATA_FOLDER, OUTPUT_FOLDER, TEXTS_FOLDER
 
+from consts import DATA_FOLDER, OUTPUT_FOLDER, TEXTS_FOLDER
 from text_parser import parse_file
 from transformations import sample_to_seconds, shift_pitch
 
@@ -22,10 +22,12 @@ CODEC = "mp4_alt"
 SHIFT_OFFSET = 6
 SHIFT_AMT = 0
 
+
 def mapping_to_timestamps(mapping, sample_rate):
     start = mapping["start"]
     end = mapping["length"] + start
     return sample_to_seconds(start, sample_rate), sample_to_seconds(end, sample_rate)
+
 
 def get_text_video(
     mapping_data, char, input_video: VideoFileClip, speed_shift_amt, sample_rate=48000
@@ -36,7 +38,7 @@ def get_text_video(
 
     if find_char is None:
         raise Exception(f"Could not find char: {char}")
-    
+
     start, end = mapping_to_timestamps(find_char, sample_rate)
     char_video = input_video.subclip(start, end)
 
@@ -49,7 +51,7 @@ def get_text_video(
     if char == " ":
         # Space, just return the black fill with no audio
         return black_fill
-    
+
     black_fill = black_fill.set_audio(char_video.audio)
 
     pitch_amt = SHIFT_AMT
@@ -58,22 +60,30 @@ def get_text_video(
 
     if SHIFT_OFFSET:
         cur_offset = SHIFT_OFFSET
-        offset_extra = SHIFT_AMT/12
-        cur_offset -= abs(offset_extra*2)
-        random_pitch_offset = random.random()*cur_offset - (cur_offset/2)
+        offset_extra = SHIFT_AMT / 12
+        cur_offset -= abs(offset_extra * 2)
+        random_pitch_offset = random.random() * cur_offset - (cur_offset / 2)
         pitch_offset = pitch_amt + random_pitch_offset
     else:
         pitch_offset = pitch_amt
     black_fill = shift_pitch(black_fill, pitch_offset)
     return black_fill
 
+
 def process_char(mappings, chars, video_path, speed_shift_amt, char_idx):
     if not hasattr(shared_local, "video") or not shared_local.video:
         shared_local.video = in_video = VideoFileClip(video_path)
-        shared_local.video.audio = in_video.audio.set_fps(48000) # type: ignore
+        shared_local.video.audio = in_video.audio.set_fps(48000)  # type: ignore
         shared_local.sample_rate = shared_local.video.audio.fps
-    
-    return get_text_video(mappings, chars[char_idx], shared_local.video, speed_shift_amt, shared_local.sample_rate)
+
+    return get_text_video(
+        mappings,
+        chars[char_idx],
+        shared_local.video,
+        speed_shift_amt,
+        shared_local.sample_rate,
+    )
+
 
 if __name__ == "__main__":
     if len(argv) < 3:
@@ -89,7 +99,7 @@ if __name__ == "__main__":
 
     with open(mappings_path, "r") as f:
         mappings = json.load(f)
-        mappings[" "] = { # Add space to mappings
+        mappings[" "] = {  # Add space to mappings
             "start": 0,
             "length": 0,
         }
@@ -113,10 +123,10 @@ if __name__ == "__main__":
     char = -1
 
     pool = ThreadPool(6)
-    process_char_partial = partial(process_char, mappings, script, input_video_path, speed_shift_amt)
-    results = tqdm(
-        pool.imap(process_char_partial, range(len(script)))
+    process_char_partial = partial(
+        process_char, mappings, script, input_video_path, speed_shift_amt
     )
+    results = tqdm(pool.imap(process_char_partial, range(len(script))))
     videos = list(results)
 
     concat_clip = mp.concatenate_videoclips(videos)
@@ -124,13 +134,13 @@ if __name__ == "__main__":
     output_path_folder = os.path.join(OUTPUT_FOLDER, argv[1].strip())
     if not os.path.exists(output_path_folder):
         os.makedirs(output_path_folder)
-    out_file = os.path.join(output_path_folder, output_path).replace('/', '\\')
+    out_file = os.path.join(output_path_folder, output_path).replace("/", "\\")
     out_file_mp4 = out_file.format(ext="mp4")
     out_file_mp3 = out_file.format(ext="mp3")
 
     print("Shift Speed: {}".format(speed_shift_amt))
     concat_clip = concat_clip.speedx(speed_shift_amt)
-    concat_clip.audio = concat_clip.audio.set_fps(48000) # type: ignore
+    concat_clip.audio = concat_clip.audio.set_fps(48000)  # type: ignore
 
     print("===================")
     print("Saving Finished Files")
@@ -144,7 +154,7 @@ if __name__ == "__main__":
         out_file_mp3,
         logger=MOVIEPY_LOGGER,
         # codec=codecs[CODEC]["audio_codec"],
-        )
+    )
 
     print("Saving Done!")
 
